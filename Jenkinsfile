@@ -1,12 +1,46 @@
-node {
+pipeline{
 
-    checkout scm
+	agent {label 'linux'}
 
-    docker.withRegistry('https://registry.hub.docker.com', 'dockerhub') {
+	environment {
+		DOCKERHUB_CREDENTIALS=credentials('dockerhub')
+	}
 
-        def customImage = docker.build("kumaryeoley/dockerwebapp")
+	stages {
+	    
+	    stage('gitclone') {
 
-        /* Push the container to the custom Registry */
-        customImage.push()
-    }
+			steps {
+				git 'https://github.com/shazforiot/nodeapp_test.git'
+			}
+		}
+
+		stage('Build') {
+
+			steps {
+				sh 'docker build -t thetips4you/nodeapp_test:latest .'
+			}
+		}
+
+		stage('Login') {
+
+			steps {
+				sh 'echo $DOCKERHUB_CREDENTIALS_PSW | docker login -u $DOCKERHUB_CREDENTIALS_USR --password-stdin'
+			}
+		}
+
+		stage('Push') {
+
+			steps {
+				sh 'docker push thetips4you/nodeapp_test:latest'
+			}
+		}
+	}
+
+	post {
+		always {
+			sh 'docker logout'
+		}
+	}
+
 }
